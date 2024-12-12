@@ -1,0 +1,16 @@
+{
+  "name": "minecraft-discord-integration",
+  "version": "1.0.0",
+  "description": "Integrating Minecraft Economy with Discord bot",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "deploy": "node deployCommands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.0.0",
+    "mongodb": "^5.0.0",
+    "express": "^4.17.1",
+    "dotenv": "^10.0.0"
+  }
+}

@@ -1,0 +1,11 @@
+# Default configuration for the Blackjack plugin
+database:
+  host: "localhost"
+  port: 27017
+  name: "minecraft_blackjack"
+  user: "root"
+  password: "password"
+
+game:
+  min_bet: 10
+  max_bet: 1000

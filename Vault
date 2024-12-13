@@ -1,0 +1,29 @@
+package com.example.blackjack;
+
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+public class EconomyManager {
+    private Economy economy;
+
+    public EconomyManager() {
+        economy = Bukkit.getServer().getServicesManager().getRegistration(Economy.class).getProvider();
+    }
+
+    public boolean withdraw(Player player, double amount) {
+        if (economy.has(player, amount)) {
+            economy.withdrawPlayer(player, amount);
+            return true;
+        }
+        return false;
+    }
+
+    public void deposit(Player player, double amount) {
+        economy.depositPlayer(player, amount);
+    }
+
+    public double getBalance(Player player) {
+        return economy.getBalance(player);
+    }
+}

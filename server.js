@@ -1,26 +1,18 @@
 const express = require('express');
 const app = express();
+const port = process.env.PORT || 3000;
+
 app.use(express.json());
 
-app.post('/updateBalance', (req, res) => {
-    const { uuid, balance } = req.body;
-
-    // Update MongoDB with the new balance
-    db.collection('players').updateOne({ minecraftUuid: uuid }, { $set: { balance } });
-
-    res.send('Balance updated.');
+app.post('/play-blackjack', (req, res) => {
+    const { playerName, betAmount } = req.body;
+    const playerWon = Math.random() > 0.5; // Random win/loss for testing
+    res.json({
+        playerWon: playerWon,
+        amountWon: playerWon ? betAmount * 2 : 0
+    });
 });
 
-app.post('/syncBalance', async (req, res) => {
-    const { uuid, balance } = req.body;
-
-    // Find the player in MongoDB and update their balance
-    const player = await db.collection('players').findOne({ minecraftUuid: uuid });
-    if (player) {
-        await db.collection('players').updateOne({ minecraftUuid: uuid }, { $set: { balance } });
-    }
-
-    res.send('Balance synced.');
+app.listen(port, () => {
+    console.log(`Discord Bot API running at http://localhost:${port}`);
 });
-
-app.listen(3000, () => console.log('API running on port 3000'));

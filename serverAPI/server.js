@@ -41,5 +41,5 @@ app.post('/sync-command', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Discord bot API running at http://localhost:${port}`);
+    console.log(`Discord bot API running at https://lavalinkrepo.onrender.com`);
 });

@@ -6,7 +6,7 @@ const app = express();
 const port = 3000;  // You can change this to any port you prefer
 
 // MongoDB connection URI
-const uri = "mongodb+srv://yourMongoDBURI"; // Replace with your MongoDB URI
+const uri = process.env.MONGO_URI; // Replace with your MongoDB URI
 const client = new MongoClient(uri);
 
 app.use(bodyParser.json());  // To parse JSON bodies

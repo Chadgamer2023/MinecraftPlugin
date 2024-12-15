@@ -1,45 +1,46 @@
 const express = require('express');
+const { CharacterAI } = require('node_characterai');
+
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
+
+// Instantiate CharacterAI
+const characterAI = new CharacterAI();
+
+// Authentication (Guest Login)
+let chat;
 
 app.use(express.json());
 
-// Store player balances and sync codes (in-memory or replace with MongoDB)
-let playerBalances = {};
-let pendingSyncs = {}; // Store the pending 6-digit sync codes
-
-// Endpoint to receive balance and code from Minecraft plugin
-app.post('/sync-balance', (req, res) => {
-    const { playerName, balance, code } = req.body;
-
-    // Store the player's balance and sync code
-    playerBalances[playerName] = balance;
-    pendingSyncs[code] = playerName;
-
-    console.log(`Balance for ${playerName} synced with code: ${code}`);
-    res.json({ success: true, playerName, balance, code });
+// Route for authenticating and starting a chat
+app.post('/start-chat', async (req, res) => {
+  try {
+    await characterAI.authenticateAsGuest();
+    // Place the characterId here (you can change this to any character's ID)
+    const characterId = "8_1NyR8w1dOXmI1uWaieQcd147hecbdIK7CeEAIrdJw";
+    chat = await characterAI.createOrContinueChat(characterId);
+    res.status(200).json({ message: "Chat started successfully!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Error starting chat.");
+  }
 });
 
-// Endpoint to handle the /sync command in Discord
-app.post('/sync-command', (req, res) => {
-    const { playerName, code } = req.body;
-
-    // Check if the code exists in pendingSyncs
-    if (pendingSyncs[code] === playerName) {
-        const balance = playerBalances[playerName];
-        res.json({
-            success: true,
-            message: `Balance synced for ${playerName}: ${balance}`,
-            balance: balance,
-        });
-
-        // Remove the code after syncing
-        delete pendingSyncs[code];
-    } else {
-        res.json({ success: false, message: 'Invalid or expired code.' });
+// Route for sending messages
+app.post('/send-message', async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || !chat) {
+      return res.status(400).send("Message or chat not available.");
     }
+    const response = await chat.sendAndAwaitResponse(message, true);
+    res.json({ response: response.text });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Error sending message.");
+  }
 });
 
 app.listen(port, () => {
-    console.log(`Discord bot API running at https://lavalinkrepo.onrender.com`);
+  console.log(`Server is running on http://localhost:${port}`);
 });

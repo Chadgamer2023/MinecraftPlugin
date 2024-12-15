@@ -1,6 +1,23 @@
 {
-    "dependencies":{
-        "express":"4.21.2",
-        "node_characterai"
-    }
+  "name": "character-ai-chat",
+  "version": "1.0.0",
+  "description": "A simple chat app integrating Character AI with image generation and upload features.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node_characterai": "^1.1.0", 
+    "fs": "0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "author": "",
+  "license": "ISC"
 }

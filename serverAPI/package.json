@@ -1,24 +1,30 @@
 {
-  "name": "character-ai-chat",
+  "name": "discord-bot-example",
   "version": "1.0.0",
-  "description": "A simple chat app integrating Character AI with image generation and upload features.",
-  "main": "server.js",
+  "description": "A Discord bot for linking accounts with MongoDB integration.",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
+  "keywords": [
+    "discord",
+    "bot",
+    "mongodb",
+    "linking",
+    "dotenv"
+  ],
+  "author": "chadgamer938",
+  "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "node_characterai": "^1.1.0", 
-    "fs": "0.0.1-security",
-    "path": "^0.12.7",
-    "discord.js": "14.16.3"
+    "discord.js": "^14.0.3",
+    "dotenv": "^16.0.3",
+    "mongodb": "^5.9.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
   },
   "engines": {
-    "node": ">=14.0.0"
-  },
-  "author": "",
-  "license": "ISC"
+    "node": ">=18.0.0"
+  }
 }

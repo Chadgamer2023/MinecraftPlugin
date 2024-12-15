@@ -1,8 +1,17 @@
+require('dotenv').config(); // Load environment variables from .env
 const { Client, GatewayIntentBits } = require('discord.js');
 const { MongoClient } = require('mongodb');
 
+// Read token and MongoDB URI from environment variables
+const botToken = process.env.DISCORD_BOT_TOKEN;
+const mongoUri = process.env.MONGO_URI;
+
+if (!botToken || !mongoUri) {
+    console.error('Error: Missing environment variables. Please set DISCORD_BOT_TOKEN and MONGO_URI in the .env file.');
+    process.exit(1);
+}
+
 const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-const mongoUri = 'your_mongodb_uri';
 const mongoClient = new MongoClient(mongoUri);
 
 bot.on('ready', () => {
@@ -40,4 +49,4 @@ bot.on('messageCreate', async (message) => {
     }
 });
 
-bot.login('your_bot_token');
+bot.login(botToken);

@@ -13,6 +13,8 @@ const mongoURI = process.env.MONGO_URI;
 const client = new MongoClient(mongoURI);
 
 // API Endpoint
+const axios = require('axios'); // Ensure Axios is installed
+
 app.post('/update-balance', async (req, res) => {
     const { username, amount } = req.body;
 
@@ -35,15 +37,33 @@ app.post('/update-balance', async (req, res) => {
                 return res.status(400).json({ success: false, message: "Insufficient balance!" });
             }
 
-            // Update the player's balance
+            // Update the player's balance in the database
             await collection.updateOne(
                 { username },
                 { $set: { balance: newBalance } }
             );
 
-            res.json({ success: true, message: "Balance updated successfully!", balance: newBalance });
+            // Notify the Minecraft plugin
+            const pluginResponse = await axios.post('https://lavalinkrepo.onrender.com/update-balance', {
+                username,
+                balance: newBalance,
+            });
+
+            if (pluginResponse.data.success) {
+                return res.json({
+                    success: true,
+                    message: "Balance updated successfully and synced with Minecraft!",
+                    balance: newBalance,
+                });
+            } else {
+                console.error("Failed to sync with Minecraft plugin:", pluginResponse.data.message);
+                return res.status(500).json({
+                    success: false,
+                    message: "Balance updated, but failed to sync with Minecraft plugin.",
+                });
+            }
         } else {
-            res.status(404).json({ success: false, message: "Player not found!" });
+            return res.status(404).json({ success: false, message: "Player not found!" });
         }
     } catch (error) {
         console.error("Error updating balance:", error);

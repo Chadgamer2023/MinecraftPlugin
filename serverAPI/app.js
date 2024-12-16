@@ -16,7 +16,7 @@ const client = new MongoClient(mongoURI);
 const axios = require('axios'); // Ensure Axios is installed
 
 app.post('/update-balance', async (req, res) => {
-    const { username, amount } = req.body;
+    const { username, balance } = req.body;
 
     if (!username || typeof amount !== 'number') {
         return res.status(400).json({ success: false, message: "Invalid input data!" });

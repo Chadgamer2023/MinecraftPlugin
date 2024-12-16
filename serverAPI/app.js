@@ -13,12 +13,13 @@ const mongoURI = process.env.MONGO_URI;
 const client = new MongoClient(mongoURI);
 
 // API Endpoint
-const axios = require('axios'); // Ensure Axios is installed
+const axios = require('axios');
 
 app.post('/update-balance', async (req, res) => {
     const { username, balance } = req.body;
 
-    if (!username || typeof amount !== 'number') {
+    // Validation check
+    if (!username || typeof balance !== 'number') {
         return res.status(400).json({ success: false, message: "Invalid input data!" });
     }
 
@@ -31,8 +32,9 @@ app.post('/update-balance', async (req, res) => {
         const player = await collection.findOne({ username });
 
         if (player) {
-            const newBalance = player.balance + amount;
+            const newBalance = player.balance + balance;
 
+            // Ensure the balance does not go below zero
             if (newBalance < 0) {
                 return res.status(400).json({ success: false, message: "Insufficient balance!" });
             }
@@ -72,6 +74,7 @@ app.post('/update-balance', async (req, res) => {
         await client.close();
     }
 });
+
 
 // Health Check Endpoint
 app.get('/', (req, res) => {

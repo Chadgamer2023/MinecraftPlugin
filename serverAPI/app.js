@@ -20,7 +20,8 @@ app.post('/check-balance', async (req, res) => {
         const database = client.db("PlayersSynced");
         const collection = database.collection("SyncedPlayers");
 
-        const user = await User.findOne({ username: userId });
+        // Find the player by username
+        const player = await collection.findOne({ username });
 
         if (player) {
             const balance = player.balance;
@@ -40,6 +41,7 @@ app.post('/check-balance', async (req, res) => {
         await client.close();
     }
 });
+
 
 // Endpoint to deduct balance (after the game action)
 app.post('/deduct-balance', async (req, res) => {

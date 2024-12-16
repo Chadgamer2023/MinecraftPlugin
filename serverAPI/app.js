@@ -20,7 +20,7 @@ app.post('/check-balance', async (req, res) => {
         const database = client.db("PlayersSynced");
         const collection = database.collection("SyncedPlayers");
 
-        const player = await collection.findOne({ username });
+        const user = await User.findOne({ username: userId });
 
         if (player) {
             const balance = player.balance;

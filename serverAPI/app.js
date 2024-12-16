@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 
 // MongoDB connection URI (replace with your own connection string)
-const mongoURI = process.env.MONGO_URI || 'your-mongodb-connection-string';
+const mongoURI = process.env.MONGO_URI;
 const client = new MongoClient(mongoURI);
 
 // API Endpoint

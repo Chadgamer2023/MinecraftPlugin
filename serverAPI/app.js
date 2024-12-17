@@ -9,10 +9,10 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(bodyParser.json());
-app.use(timeout('10s')); // Set timeout for requests (10 seconds)
+app.use(timeout('60s')); // Set timeout for requests (10 seconds)
 
 // MongoDB connection URI (ensure you have set this in your environment variables)
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017'; // Add a fallback for local testing
+const mongoURI = process.env.MONGO_URI;
 const client = new MongoClient(mongoURI);
 
 // API Endpoint: Update Balance
@@ -65,7 +65,7 @@ app.post('/update-balance', async (req, res) => {
             pluginResponse = await axios.post('https://lavalinkrepo.onrender.com/update-balance', {
                 username,
                 balance: newBalance,
-            }, { timeout: 5000 }); // Timeout for external API (5 seconds)
+            }, { timeout: 60000 }); // Timeout for external API (60 seconds)
             console.log("Plugin response:", pluginResponse.data);
         } catch (pluginError) {
             console.error("Failed to sync with Minecraft plugin:", pluginError.message);

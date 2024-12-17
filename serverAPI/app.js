@@ -5,11 +5,11 @@ const axios = require('axios');
 const timeout = require('connect-timeout'); // To avoid hanging requests
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 25565;
 
 // Middleware
 app.use(bodyParser.json());
-app.use(timeout('60s')); // Set timeout for requests (10 seconds)
+app.use(timeout('60s')); // Set timeout for requests (60 seconds)
 
 // MongoDB connection URI (ensure you have set this in your environment variables)
 const mongoURI = process.env.MONGO_URI;

@@ -2,7 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { MongoClient } = require('mongodb');
 const axios = require('axios');
-const timeout = require('connect-timeout'); // To avoid hanging requests
+const timeout = require('connect-timeout');
 
 const app = express();
 const PORT = process.env.PORT || 25565;
@@ -11,91 +11,88 @@ const PORT = process.env.PORT || 25565;
 app.use(bodyParser.json());
 app.use(timeout('60s')); // Set timeout for requests (60 seconds)
 
-// MongoDB connection URI (ensure you have set this in your environment variables)
+// MongoDB connection setup
 const mongoURI = process.env.MONGO_URI;
-const client = new MongoClient(mongoURI);
+const client = new MongoClient(mongoURI, { useUnifiedTopology: true });
+let database, collection;
+
+// Initialize MongoDB connection once
+async function initializeDB() {
+    try {
+        await client.connect();
+        database = client.db("PlayersSynced");
+        collection = database.collection("SyncedPlayers");
+        console.log("MongoDB connected.");
+    } catch (error) {
+        console.error("MongoDB connection error:", error.message);
+        process.exit(1);
+    }
+}
+initializeDB();
 
 // API Endpoint: Update Balance
 app.post('/update-balance', async (req, res) => {
     const { username, balance } = req.body;
 
-    console.log("Request received to update balance:", { username, balance });
+    console.log("Request to update balance:", { username, balance });
 
-    // Input Validation
     if (!username || typeof balance !== 'number') {
-        console.log("Invalid input data");
-        return res.status(400).json({ success: false, message: "Invalid input data! Username and numeric balance are required." });
+        return res.status(400).json({ success: false, message: "Invalid input!" });
     }
 
     try {
-        console.log("Connecting to MongoDB...");
-        await client.connect();
-        const database = client.db("PlayersSynced");
-        const collection = database.collection("SyncedPlayers");
-        console.log("Connected to MongoDB.");
-
-        // Find the player by username
+        // Fetch player balance
         const player = await collection.findOne({ username });
-        console.log("Player fetched from database:", player);
 
         if (!player) {
-            console.log("Player not found:", username);
             return res.status(404).json({ success: false, message: "Player not found!" });
         }
 
-        // Calculate the new balance
+        // Calculate new balance
         const newBalance = player.balance + balance;
-
         if (newBalance < 0) {
-            console.log("Insufficient balance for user:", username);
             return res.status(400).json({ success: false, message: "Insufficient balance!" });
         }
 
-        // Update the player's balance in the database
-        await collection.updateOne(
-            { username },
-            { $set: { balance: newBalance } }
-        );
+        // Update balance in the database
+        await collection.updateOne({ username }, { $set: { balance: newBalance } });
+
         console.log("Database updated with new balance:", newBalance);
 
-        // Notify the external Minecraft plugin
-        let pluginResponse;
-        try {
-            console.log("Notifying Minecraft plugin...");
-            pluginResponse = await axios.post('https://lavalinkrepo.onrender.com/update-balance', {
-                username,
-                balance: newBalance,
-            }, { timeout: 60000 }); // Timeout for external API (60 seconds)
-            console.log("Plugin response:", pluginResponse.data);
-        } catch (pluginError) {
-            console.error("Failed to sync with Minecraft plugin:", pluginError.message);
+        // Retry mechanism for plugin sync
+        let syncSuccess = false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const pluginResponse = await axios.post(
+                    'https://lavalinkrepo.onrender.com/update-balance',
+                    { username, balance: newBalance },
+                    { timeout: 10000 }
+                );
+                if (pluginResponse.data.success) {
+                    syncSuccess = true;
+                    break;
+                }
+            } catch (err) {
+                console.error(`Plugin sync failed (attempt ${attempt}):`, err.message);
+            }
+        }
+
+        if (!syncSuccess) {
             return res.status(500).json({
                 success: false,
-                message: "Balance updated, but failed to sync with Minecraft plugin.",
+                message: "Balance updated, but failed to sync with Minecraft plugin after retries.",
             });
         }
 
-        // Return success response
-        if (pluginResponse.data && pluginResponse.data.success) {
-            return res.json({
-                success: true,
-                message: "Balance updated successfully and synced with Minecraft!",
-                balance: newBalance,
-            });
-        } else {
-            console.error("Minecraft plugin returned failure:", pluginResponse.data.message);
-            return res.status(500).json({
-                success: false,
-                message: "Balance updated, but Minecraft plugin failed to confirm.",
-            });
-        }
+        return res.json({
+            success: true,
+            message: "Balance updated and synced successfully!",
+            balance: newBalance,
+        });
 
     } catch (error) {
-        console.error("Server error:", error.message);
-        return res.status(500).json({ success: false, message: "Server error! Please try again later." });
-    } finally {
-        console.log("Closing MongoDB connection.");
-        await client.close();
+        console.error("Error updating balance:", error.message);
+        return res.status(500).json({ success: false, message: "Server error!" });
     }
 });
 
@@ -104,16 +101,15 @@ app.get('/', (req, res) => {
     res.send("API is running successfully!");
 });
 
-// Timeout Middleware Handler (for hanging requests)
+// Timeout Middleware Handler
 app.use((req, res, next) => {
     if (req.timedout) {
-        console.error("Request timed out");
         return res.status(504).json({ success: false, message: "Request timeout!" });
     }
     next();
 });
 
-// Start the Server
+// Start Server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

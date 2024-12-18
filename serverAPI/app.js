@@ -1,22 +1,25 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { MongoClient } = require('mongodb');
+const NodeCache = require('node-cache');
 const axios = require('axios');
 const timeout = require('connect-timeout');
 
 const app = express();
 const PORT = process.env.PORT || 25565;
 
+// Cache Setup (5-minute TTL by default)
+const playerCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+
 // Middleware
 app.use(bodyParser.json());
-app.use(timeout('60s')); // Set timeout for requests (60 seconds)
+app.use(timeout('60s'));
 
-// MongoDB connection setup
+// MongoDB Setup
 const mongoURI = process.env.MONGO_URI;
 const client = new MongoClient(mongoURI, { useUnifiedTopology: true });
 let database, collection;
 
-// Initialize MongoDB connection once
 async function initializeDB() {
     try {
         await client.connect();
@@ -30,46 +33,58 @@ async function initializeDB() {
 }
 initializeDB();
 
+// Function: Update Cache and Database
+async function updateBalance(username, newBalance) {
+    try {
+        // Update cache first
+        playerCache.set(username, { balance: newBalance });
+
+        // Update MongoDB
+        await collection.updateOne({ username }, { $set: { balance: newBalance } }, { upsert: true });
+        console.log(`Cache and database updated for ${username}: ${newBalance}`);
+    } catch (error) {
+        console.error("Failed to update balance:", error.message);
+        throw error;
+    }
+}
+
 // API Endpoint: Update Balance
 app.post('/update-balance', async (req, res) => {
     const { username, balance } = req.body;
-
-    console.log("Request to update balance:", { username, balance });
 
     if (!username || typeof balance !== 'number') {
         return res.status(400).json({ success: false, message: "Invalid input!" });
     }
 
     try {
-        // Fetch player balance
-        const player = await collection.findOne({ username });
+        // Fetch current balance from cache or database
+        let playerData = playerCache.get(username);
 
-        if (!player) {
-            return res.status(404).json({ success: false, message: "Player not found!" });
+        if (!playerData) {
+            playerData = await collection.findOne({ username });
+            if (playerData) playerCache.set(username, playerData);
         }
 
-        // Calculate new balance
-        const newBalance = player.balance + balance;
+        const currentBalance = playerData ? playerData.balance : 0;
+        const newBalance = currentBalance + balance;
+
         if (newBalance < 0) {
             return res.status(400).json({ success: false, message: "Insufficient balance!" });
         }
 
-        // Update balance in the database
-        await collection.updateOne({ username }, { $set: { balance: newBalance } });
+        // Update both cache and database
+        await updateBalance(username, newBalance);
 
-        console.log("Database updated with new balance:", newBalance);
-
-        // Retry mechanism for plugin sync
-        let syncSuccess = false;
+        // Notify plugin (Retry mechanism)
+        let pluginSynced = false;
         for (let attempt = 1; attempt <= 3; attempt++) {
             try {
-                const pluginResponse = await axios.post(
-                    'https://lavalinkrepo.onrender.com/update-balance',
-                    { username, balance: newBalance },
-                    { timeout: 10000 }
-                );
+                const pluginResponse = await axios.post('https://lavalinkrepo.onrender.com/update-balance', {
+                    username,
+                    balance: newBalance,
+                });
                 if (pluginResponse.data.success) {
-                    syncSuccess = true;
+                    pluginSynced = true;
                     break;
                 }
             } catch (err) {
@@ -77,22 +92,18 @@ app.post('/update-balance', async (req, res) => {
             }
         }
 
-        if (!syncSuccess) {
-            return res.status(500).json({
-                success: false,
-                message: "Balance updated, but failed to sync with Minecraft plugin after retries.",
-            });
+        if (!pluginSynced) {
+            console.warn("Balance updated but failed to notify Minecraft plugin.");
         }
 
-        return res.json({
+        res.json({
             success: true,
-            message: "Balance updated and synced successfully!",
+            message: "Balance updated successfully!",
             balance: newBalance,
         });
-
     } catch (error) {
         console.error("Error updating balance:", error.message);
-        return res.status(500).json({ success: false, message: "Server error!" });
+        res.status(500).json({ success: false, message: "Server error!" });
     }
 });
 
@@ -101,15 +112,6 @@ app.get('/', (req, res) => {
     res.send("API is running successfully!");
 });
 
-// Timeout Middleware Handler
-app.use((req, res, next) => {
-    if (req.timedout) {
-        return res.status(504).json({ success: false, message: "Request timeout!" });
-    }
-    next();
-});
-
-// Start Server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
